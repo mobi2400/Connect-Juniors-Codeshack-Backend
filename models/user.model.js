@@ -1,0 +1,44 @@
+import mongoose from "mongoose";
+
+const userSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true,
+    },
+    passwordHash: {
+        type: String,
+        required: true,
+    },
+    role: {
+        type: String,
+        enum: ["junior", "mentor", "admin"],
+        default: "junior",
+        required: true,
+    },
+    isMentorApproved: {
+        type: Boolean,
+        default: false,
+    },
+    bio: {
+        type: String,
+        default: "",
+        maxlength: 500,
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
+});
+
+// Index for faster queries
+userSchema.index({role: 1});
+
+export default mongoose.model("User", userSchema);
