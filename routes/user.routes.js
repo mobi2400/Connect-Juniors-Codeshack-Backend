@@ -1,12 +1,8 @@
 import express from "express";
 import * as userController from "../controllers/user.controller.js";
-import {registerMentor} from "../controllers/mentorProfile.controller.js";
-import {registerAdmin} from "../controllers/admin.controller.js";
 import validate from "../middleware/validate.middleware.js";
 import {
     registerSchema,
-    registerMentorSchema,
-    registerAdminSchema,
     loginSchema,
     updateProfileSchema,
 } from "../schema/user.schema.js";
@@ -15,8 +11,6 @@ const router = express.Router();
 
 // User authentication
 router.post("/register", validate(registerSchema), userController.register);
-router.post("/register-mentor", validate(registerMentorSchema), registerMentor);
-router.post("/register-admin", validate(registerAdminSchema), registerAdmin);
 router.post("/login", validate(loginSchema), userController.login);
 
 // Get mentors (needs to be before /:userId to avoid conflicts)

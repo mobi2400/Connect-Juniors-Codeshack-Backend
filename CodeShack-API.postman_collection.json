@@ -63,6 +63,60 @@
                     }
                 },
                 {
+                    "name": "Login as Mentor",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"bob@example.com\",\n  \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/users/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "users",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Login as Admin",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"charlie@example.com\",\n  \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/users/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "users",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
                     "name": "Get User Profile",
                     "request": {
                         "method": "GET",
@@ -999,14 +1053,14 @@
                             "raw": "{\n  \"name\": \"Bob Mentor\",\n  \"email\": \"bob@example.com\",\n  \"password\": \"password123\",\n  \"bio\": \"Senior developer with 10 years of experience in JavaScript and Node.js\",\n  \"secretKey\": \"{{mentorSecretKey}}\"\n}"
                         },
                         "url": {
-                            "raw": "{{baseUrl}}/api/users/register-mentor",
+                            "raw": "{{baseUrl}}/api/mentor-profiles/register",
                             "host": [
                                 "{{baseUrl}}"
                             ],
                             "path": [
                                 "api",
-                                "users",
-                                "register-mentor"
+                                "mentor-profiles",
+                                "register"
                             ]
                         }
                     }

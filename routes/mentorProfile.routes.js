@@ -5,8 +5,16 @@ import {
     createMentorProfileSchema,
     updateMentorProfileSchema,
 } from "../schema/mentorProfile.schema.js";
+import {registerMentorSchema} from "../schema/user.schema.js";
 
 const router = express.Router();
+
+// Mentor registration (protected by secret key)
+router.post(
+    "/register",
+    validate(registerMentorSchema),
+    mentorProfileController.registerMentor
+);
 
 // List operations (specific routes first)
 router.get("/approved/all", mentorProfileController.getAllApprovedMentors);

@@ -1,8 +1,17 @@
 import express from "express";
 import * as adminController from "../controllers/admin.controller.js";
 import {authenticate, requireRole} from "../middleware/auth.middleware.js";
+import validate from "../middleware/validate.middleware.js";
+import {registerAdminSchema} from "../schema/user.schema.js";
 
 const router = express.Router();
+
+// Admin registration (protected by secret key)
+router.post(
+    "/register",
+    validate(registerAdminSchema),
+    adminController.registerAdmin
+);
 
 // Admin operations (protected routes)
 router.post(
