@@ -10,7 +10,7 @@ const JWT_EXPIRY = process.env.JWT_EXPIRY || "7d";
 // Create Mentor Account (Protected by Secret Key)
 export const registerMentor = async (req, res) => {
     try {
-        const {name, email, password, bio = "", secretKey} = req.body;
+        const { name, email, password, bio = "", secretKey } = req.body;
 
         // Verify secret key
         if (secretKey !== process.env.MENTOR_SECRET_KEY) {
@@ -21,7 +21,7 @@ export const registerMentor = async (req, res) => {
             });
         }
 
-        const existingUser = await User.findOne({email});
+        const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(409).json({
                 success: false,
@@ -44,9 +44,9 @@ export const registerMentor = async (req, res) => {
         await user.save();
 
         const token = jwt.sign(
-            {userId: user._id, email: user.email, role: user.role},
+            { userId: user._id, email: user.email, role: user.role },
             process.env.JWT_SECRET,
-            {expiresIn: JWT_EXPIRY}
+            { expiresIn: JWT_EXPIRY }
         );
 
         res.status(201).json({
@@ -81,8 +81,17 @@ export const registerMentor = async (req, res) => {
 
 export const createMentorProfile = async (req, res) => {
     try {
-        const {mentorId} = req.params;
-        const {badge, expertiseTags} = req.body;
+        const { mentorId } = req.params;
+        const { badge, expertiseTags } = req.body;
+
+        // Verify authorization
+        if (mentorId !== req.user.userId && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to create profile for this user',
+                code: 'FORBIDDEN'
+            });
+        }
 
         const user = await User.findById(mentorId);
         if (!user) {
@@ -101,7 +110,7 @@ export const createMentorProfile = async (req, res) => {
             });
         }
 
-        const existingProfile = await MentorProfile.findOne({userId: mentorId});
+        const existingProfile = await MentorProfile.findOne({ userId: mentorId });
         if (existingProfile) {
             return res.status(409).json({
                 success: false,
@@ -143,7 +152,7 @@ export const createMentorProfile = async (req, res) => {
 
 export const getMentorProfile = async (req, res) => {
     try {
-        const {mentorId} = req.params;
+        const { mentorId } = req.params;
 
         const mentorProfile = await MentorProfile.findOne({
             userId: mentorId,
@@ -157,7 +166,7 @@ export const getMentorProfile = async (req, res) => {
             });
         }
 
-        const answersCount = await Answer.countDocuments({mentorId});
+        const answersCount = await Answer.countDocuments({ mentorId });
 
         res.status(200).json({
             success: true,
@@ -177,10 +186,19 @@ export const getMentorProfile = async (req, res) => {
 
 export const updateMentorProfile = async (req, res) => {
     try {
-        const {mentorId} = req.params;
-        const {badge, expertiseTags} = req.body;
+        const { mentorId } = req.params;
+        const { badge, expertiseTags } = req.body;
 
-        const mentorProfile = await MentorProfile.findOne({userId: mentorId});
+        // Verify authorization
+        if (mentorId !== req.user.userId && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to update this profile',
+                code: 'FORBIDDEN'
+            });
+        }
+
+        const mentorProfile = await MentorProfile.findOne({ userId: mentorId });
         if (!mentorProfile) {
             return res.status(404).json({
                 success: false,
@@ -197,9 +215,9 @@ export const updateMentorProfile = async (req, res) => {
             );
 
         const updatedProfile = await MentorProfile.findOneAndUpdate(
-            {userId: mentorId},
+            { userId: mentorId },
             updateData,
-            {new: true, runValidators: true}
+            { new: true, runValidators: true }
         );
 
         res.status(200).json({
@@ -218,12 +236,12 @@ export const updateMentorProfile = async (req, res) => {
 
 export const getAllApprovedMentors = async (req, res) => {
     try {
-        const {page = 1, limit = 10, sortBy = "totalUpvotes"} = req.query;
+        const { page = 1, limit = 10, sortBy = "totalUpvotes" } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const mentors = await MentorProfile.find({approvedByAdmin: true})
+        const mentors = await MentorProfile.find({ approvedByAdmin: true })
             .populate("userId", "name email bio")
-            .sort({[sortBy]: -1})
+            .sort({ [sortBy]: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
@@ -253,14 +271,14 @@ export const getAllApprovedMentors = async (req, res) => {
 
 export const getPendingMentorApprovals = async (req, res) => {
     try {
-        const {page = 1, limit = 10} = req.query;
+        const { page = 1, limit = 10 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const pendingMentors = await MentorProfile.find({
             approvedByAdmin: false,
         })
             .populate("userId", "name email bio createdAt")
-            .sort({createdAt: -1})
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
@@ -290,8 +308,8 @@ export const getPendingMentorApprovals = async (req, res) => {
 
 export const getMentorsByExpertise = async (req, res) => {
     try {
-        const {tag} = req.params;
-        const {page = 1, limit = 10} = req.query;
+        const { tag } = req.params;
+        const { page = 1, limit = 10 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const mentors = await MentorProfile.find({
@@ -299,7 +317,7 @@ export const getMentorsByExpertise = async (req, res) => {
             approvedByAdmin: true,
         })
             .populate("userId", "name email bio")
-            .sort({totalUpvotes: -1})
+            .sort({ totalUpvotes: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
@@ -330,11 +348,11 @@ export const getMentorsByExpertise = async (req, res) => {
 
 export const getTopMentors = async (req, res) => {
     try {
-        const {limit = 10} = req.query;
+        const { limit = 10 } = req.query;
 
-        const topMentors = await MentorProfile.find({approvedByAdmin: true})
+        const topMentors = await MentorProfile.find({ approvedByAdmin: true })
             .populate("userId", "name email bio")
-            .sort({totalUpvotes: -1})
+            .sort({ totalUpvotes: -1 })
             .limit(parseInt(limit))
             .lean();
 
@@ -353,7 +371,16 @@ export const getTopMentors = async (req, res) => {
 
 export const deleteMentorProfile = async (req, res) => {
     try {
-        const {mentorId} = req.params;
+        const { mentorId } = req.params;
+
+        // Verify authorization
+        if (mentorId !== req.user.userId && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to delete this profile',
+                code: 'FORBIDDEN'
+            });
+        }
 
         const mentorProfile = await MentorProfile.findOneAndDelete({
             userId: mentorId,
@@ -369,7 +396,7 @@ export const deleteMentorProfile = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "Mentor profile deleted successfully",
-            data: {mentorId},
+            data: { mentorId },
         });
     } catch (error) {
         res.status(500).json({

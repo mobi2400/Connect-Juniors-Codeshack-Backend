@@ -1,13 +1,13 @@
 import Comment from "../models/comment.model.js";
 import Doubt from "../models/doubt.model.js";
 import User from "../models/user.model.js";
-import {getIO} from "../socket/socket.js";
+import { getIO } from "../socket/socket.js";
 
 export const createComment = async (req, res) => {
     try {
-        const {doubtId} = req.params;
-        const {userId} = req.params;
-        const {content, parentCommentId} = req.body;
+        const { doubtId } = req.params;
+        const { userId } = req.user;
+        const { content, parentCommentId } = req.body;
 
         const doubt = await Doubt.findById(doubtId);
         if (!doubt) {
@@ -76,8 +76,8 @@ export const createComment = async (req, res) => {
 
 export const getCommentsByDoubt = async (req, res) => {
     try {
-        const {doubtId} = req.params;
-        const {page = 1, limit = 20} = req.query;
+        const { doubtId } = req.params;
+        const { page = 1, limit = 20 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const doubt = await Doubt.findById(doubtId);
@@ -89,17 +89,17 @@ export const getCommentsByDoubt = async (req, res) => {
             });
         }
 
-        const comments = await Comment.find({doubtId, parentCommentId: null})
+        const comments = await Comment.find({ doubtId, parentCommentId: null })
             .populate("userId", "name email")
-            .sort({createdAt: -1})
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
 
         for (let comment of comments) {
-            const replies = await Comment.find({parentCommentId: comment._id})
+            const replies = await Comment.find({ parentCommentId: comment._id })
                 .populate("userId", "name email")
-                .sort({createdAt: 1})
+                .sort({ createdAt: 1 })
                 .lean();
             comment.replies = replies;
         }
@@ -130,7 +130,7 @@ export const getCommentsByDoubt = async (req, res) => {
 
 export const getCommentById = async (req, res) => {
     try {
-        const {commentId} = req.params;
+        const { commentId } = req.params;
 
         const comment = await Comment.findById(commentId)
             .populate("userId", "name email")
@@ -144,9 +144,9 @@ export const getCommentById = async (req, res) => {
             });
         }
 
-        const replies = await Comment.find({parentCommentId: commentId})
+        const replies = await Comment.find({ parentCommentId: commentId })
             .populate("userId", "name email")
-            .sort({createdAt: 1})
+            .sort({ createdAt: 1 })
             .lean();
 
         comment.replies = replies;
@@ -166,8 +166,8 @@ export const getCommentById = async (req, res) => {
 
 export const updateComment = async (req, res) => {
     try {
-        const {commentId} = req.params;
-        const {content} = req.body;
+        const { commentId } = req.params;
+        const { content } = req.body;
 
         const comment = await Comment.findById(commentId);
         if (!comment) {
@@ -178,10 +178,18 @@ export const updateComment = async (req, res) => {
             });
         }
 
+        if (comment.userId.toString() !== req.user.userId && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to update this comment',
+                code: 'FORBIDDEN'
+            });
+        }
+
         const updatedComment = await Comment.findByIdAndUpdate(
             commentId,
-            {content},
-            {new: true, runValidators: true}
+            { content },
+            { new: true, runValidators: true }
         ).populate("userId", "name email");
 
         res.status(200).json({
@@ -200,7 +208,7 @@ export const updateComment = async (req, res) => {
 
 export const deleteComment = async (req, res) => {
     try {
-        const {commentId} = req.params;
+        const { commentId } = req.params;
 
         const comment = await Comment.findById(commentId);
         if (!comment) {
@@ -211,15 +219,23 @@ export const deleteComment = async (req, res) => {
             });
         }
 
+        if (comment.userId.toString() !== req.user.userId && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to delete this comment',
+                code: 'FORBIDDEN'
+            });
+        }
+
         const doubtId = comment.doubtId;
 
-        await Comment.deleteMany({parentCommentId: commentId});
-        await Comment.deleteOne({_id: commentId});
+        await Comment.deleteMany({ parentCommentId: commentId });
+        await Comment.deleteOne({ _id: commentId });
 
         // Emit real-time event
         try {
             const io = getIO();
-            io.to(`doubt-${doubtId}`).emit("comment-deleted", {commentId});
+            io.to(`doubt-${doubtId}`).emit("comment-deleted", { commentId });
         } catch (socketError) {
             console.error("Socket.IO error:", socketError.message);
         }
@@ -227,7 +243,7 @@ export const deleteComment = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "Comment deleted successfully",
-            data: {commentId: comment._id},
+            data: { commentId: comment._id },
         });
     } catch (error) {
         res.status(500).json({
@@ -240,8 +256,8 @@ export const deleteComment = async (req, res) => {
 
 export const getReplies = async (req, res) => {
     try {
-        const {commentId} = req.params;
-        const {page = 1, limit = 10} = req.query;
+        const { commentId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const parentComment = await Comment.findById(commentId);
@@ -253,9 +269,9 @@ export const getReplies = async (req, res) => {
             });
         }
 
-        const replies = await Comment.find({parentCommentId: commentId})
+        const replies = await Comment.find({ parentCommentId: commentId })
             .populate("userId", "name email")
-            .sort({createdAt: 1})
+            .sort({ createdAt: 1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
@@ -285,8 +301,8 @@ export const getReplies = async (req, res) => {
 
 export const getCommentsByUser = async (req, res) => {
     try {
-        const {userId} = req.params;
-        const {page = 1, limit = 10} = req.query;
+        const { userId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const user = await User.findById(userId);
@@ -298,14 +314,14 @@ export const getCommentsByUser = async (req, res) => {
             });
         }
 
-        const comments = await Comment.find({userId})
+        const comments = await Comment.find({ userId })
             .populate("doubtId", "title")
-            .sort({createdAt: -1})
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
 
-        const total = await Comment.countDocuments({userId});
+        const total = await Comment.countDocuments({ userId });
 
         res.status(200).json({
             success: true,

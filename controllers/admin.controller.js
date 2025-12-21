@@ -15,7 +15,7 @@ const JWT_EXPIRY = process.env.JWT_EXPIRY || "7d";
 // Create Admin Account (Protected by Secret Key)
 export const registerAdmin = async (req, res) => {
     try {
-        const {name, email, password, bio = "", secretKey} = req.body;
+        const { name, email, password, bio = "", secretKey } = req.body;
 
         // Verify secret key
         if (secretKey !== process.env.ADMIN_SECRET_KEY) {
@@ -26,7 +26,7 @@ export const registerAdmin = async (req, res) => {
             });
         }
 
-        const existingUser = await User.findOne({email});
+        const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(409).json({
                 success: false,
@@ -49,9 +49,9 @@ export const registerAdmin = async (req, res) => {
         await user.save();
 
         const token = jwt.sign(
-            {userId: user._id, email: user.email, role: user.role},
+            { userId: user._id, email: user.email, role: user.role },
             process.env.JWT_SECRET,
-            {expiresIn: JWT_EXPIRY}
+            { expiresIn: JWT_EXPIRY }
         );
 
         res.status(201).json({
@@ -85,23 +85,27 @@ export const registerAdmin = async (req, res) => {
 export const approveMentor = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
-        const {mentorId} = req.params; // Get mentor ID from URL params
+        const { mentorId } = req.params; // Get mentor ID from URL params
 
         const mentorProfile = await MentorProfile.findOne({
             userId: mentorId,
         });
-        if (!mentorProfile) {
+
+        // If profile exists, approve it. If not, proceed to approve user anyway.
+        if (mentorProfile) {
+            mentorProfile.approvedByAdmin = true;
+            await mentorProfile.save();
+        }
+
+        const mentor = await User.findById(mentorId);
+        if (!mentor) {
             return res.status(404).json({
                 success: false,
-                message: "Mentor profile not found",
-                code: "PROFILE_NOT_FOUND",
+                message: "User not found",
+                code: "USER_NOT_FOUND",
             });
         }
 
-        mentorProfile.approvedByAdmin = true;
-        await mentorProfile.save();
-
-        const mentor = await User.findById(mentorId);
         mentor.isMentorApproved = true;
         await mentor.save();
 
@@ -133,7 +137,7 @@ export const approveMentor = async (req, res) => {
 export const rejectMentor = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
-        const {mentorId} = req.params; // Get mentor ID from URL params
+        const { mentorId } = req.params; // Get mentor ID from URL params
 
         const mentorProfile = await MentorProfile.findOneAndDelete({
             userId: mentorId,
@@ -174,7 +178,7 @@ export const rejectMentor = async (req, res) => {
 export const deleteDoubt = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
-        const {doubtId} = req.params; // Get doubt ID from URL params
+        const { doubtId } = req.params; // Get doubt ID from URL params
 
         const doubt = await Doubt.findByIdAndDelete(doubtId);
         if (!doubt) {
@@ -185,8 +189,8 @@ export const deleteDoubt = async (req, res) => {
             });
         }
 
-        await Answer.deleteMany({doubtId});
-        await Comment.deleteMany({doubtId});
+        await Answer.deleteMany({ doubtId });
+        await Comment.deleteMany({ doubtId });
 
         const adminAction = new AdminAction({
             adminId,
@@ -216,7 +220,7 @@ export const deleteDoubt = async (req, res) => {
 export const deleteAnswer = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
-        const {answerId} = req.params; // Get answer ID from URL params
+        const { answerId } = req.params; // Get answer ID from URL params
 
         const answer = await Answer.findByIdAndDelete(answerId);
         if (!answer) {
@@ -255,7 +259,7 @@ export const deleteAnswer = async (req, res) => {
 export const deleteComment = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
-        const {commentId} = req.params; // Get comment ID from URL params
+        const { commentId } = req.params; // Get comment ID from URL params
 
         const comment = await Comment.findByIdAndDelete(commentId);
         if (!comment) {
@@ -266,7 +270,7 @@ export const deleteComment = async (req, res) => {
             });
         }
 
-        await Comment.deleteMany({parentCommentId: commentId});
+        await Comment.deleteMany({ parentCommentId: commentId });
 
         const adminAction = new AdminAction({
             adminId,
@@ -296,7 +300,7 @@ export const deleteComment = async (req, res) => {
 export const deleteJuniorPost = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
-        const {postId} = req.params; // Get post ID from URL params
+        const { postId } = req.params; // Get post ID from URL params
 
         const post = await JuniorSpacePost.findByIdAndDelete(postId);
         if (!post) {
@@ -335,7 +339,7 @@ export const deleteJuniorPost = async (req, res) => {
 export const banUser = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
-        const {userId} = req.params; // Get user ID from URL params
+        const { userId } = req.params; // Get user ID from URL params
 
         const user = await User.findById(userId);
         if (!user) {
@@ -374,7 +378,7 @@ export const banUser = async (req, res) => {
 export const unbanUser = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
-        const {userId} = req.params; // Get user ID from URL params
+        const { userId } = req.params; // Get user ID from URL params
 
         const user = await User.findById(userId);
         if (!user) {
@@ -413,15 +417,15 @@ export const unbanUser = async (req, res) => {
 export const getAdminActions = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
-        const {page = 1, limit = 20, actionType} = req.query;
+        const { page = 1, limit = 20, actionType } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const filter = {adminId};
+        const filter = { adminId };
         if (actionType) filter.actionType = actionType;
 
         const actions = await AdminAction.find(filter)
             .populate("adminId", "name email")
-            .sort({createdAt: -1})
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
@@ -451,10 +455,10 @@ export const getAdminStats = async (req, res) => {
     try {
         const adminId = req.user.userId; // Get admin ID from JWT token
 
-        const totalActions = await AdminAction.countDocuments({adminId});
+        const totalActions = await AdminAction.countDocuments({ adminId });
         const actionBreakdown = await AdminAction.aggregate([
-            {$match: {adminId: new mongoose.Types.ObjectId(adminId)}}, // Convert to ObjectId for aggregation
-            {$group: {_id: "$actionType", count: {$sum: 1}}},
+            { $match: { adminId: new mongoose.Types.ObjectId(adminId) } }, // Convert to ObjectId for aggregation
+            { $group: { _id: "$actionType", count: { $sum: 1 } } },
         ]);
 
         res.status(200).json({

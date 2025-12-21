@@ -1,4 +1,4 @@
-import {z} from "zod";
+import { z } from "zod";
 
 // User Registration Schema (Junior only)
 const registerSchema = z.object({
@@ -6,6 +6,7 @@ const registerSchema = z.object({
     email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     bio: z.string().max(500).optional(),
+    role: z.enum(["junior", "mentor"]).optional(),
 });
 
 // Mentor Registration Schema (Requires Secret Key)

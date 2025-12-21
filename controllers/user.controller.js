@@ -7,8 +7,16 @@ const JWT_EXPIRY = process.env.JWT_EXPIRY || "7d";
 
 export const register = async (req, res) => {
     try {
-        const {name, email, password, bio = ""} = req.body;
-        const role = "junior"; // Regular registration only allows junior role
+        const {name, email, password, role = "junior", bio = ""} = req.body;
+
+        // Validate role
+        if (!["junior", "mentor"].includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid role. Must be 'junior' or 'mentor'.",
+                code: "INVALID_ROLE",
+            });
+        }
 
         const existingUser = await User.findOne({email});
         if (existingUser) {
@@ -27,7 +35,7 @@ export const register = async (req, res) => {
             passwordHash,
             role,
             bio,
-            isMentorApproved: true, // Juniors are auto-approved
+            isMentorApproved: role === "junior", // Only juniors are auto-approved
         });
 
         await user.save();
@@ -47,6 +55,7 @@ export const register = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 bio: user.bio,
+                isMentorApproved: user.isMentorApproved,
             },
             token,
         });

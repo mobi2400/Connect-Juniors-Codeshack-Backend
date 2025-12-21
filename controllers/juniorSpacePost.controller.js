@@ -1,11 +1,11 @@
 import JuniorSpacePost from "../models/juniorSpacePost.model.js";
 import User from "../models/user.model.js";
-import {getIO} from "../socket/socket.js";
+import { getIO } from "../socket/socket.js";
 
 export const createPost = async (req, res) => {
     try {
-        const {juniorId} = req.params;
-        const {content} = req.body;
+        const { userId: juniorId } = req.user;
+        const { content } = req.body;
 
         const user = await User.findById(juniorId);
         if (!user) {
@@ -52,12 +52,12 @@ export const createPost = async (req, res) => {
 
 export const getAllPosts = async (req, res) => {
     try {
-        const {page = 1, limit = 10} = req.query;
+        const { page = 1, limit = 10 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const posts = await JuniorSpacePost.find()
             .populate("juniorId", "name email bio")
-            .sort({createdAt: -1})
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
@@ -85,7 +85,7 @@ export const getAllPosts = async (req, res) => {
 
 export const getPostById = async (req, res) => {
     try {
-        const {postId} = req.params;
+        const { postId } = req.params;
 
         const post = await JuniorSpacePost.findById(postId).populate(
             "juniorId",
@@ -115,8 +115,8 @@ export const getPostById = async (req, res) => {
 
 export const updatePost = async (req, res) => {
     try {
-        const {postId} = req.params;
-        const {content} = req.body;
+        const { postId } = req.params;
+        const { content } = req.body;
 
         const post = await JuniorSpacePost.findById(postId);
         if (!post) {
@@ -127,10 +127,18 @@ export const updatePost = async (req, res) => {
             });
         }
 
+        if (post.juniorId.toString() !== req.user.userId && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to update this post',
+                code: 'FORBIDDEN'
+            });
+        }
+
         const updatedPost = await JuniorSpacePost.findByIdAndUpdate(
             postId,
-            {content},
-            {new: true, runValidators: true}
+            { content },
+            { new: true, runValidators: true }
         ).populate("juniorId", "name email bio");
 
         res.status(200).json({
@@ -149,9 +157,9 @@ export const updatePost = async (req, res) => {
 
 export const deletePost = async (req, res) => {
     try {
-        const {postId} = req.params;
+        const { postId } = req.params;
 
-        const post = await JuniorSpacePost.findByIdAndDelete(postId);
+        const post = await JuniorSpacePost.findById(postId);
         if (!post) {
             return res.status(404).json({
                 success: false,
@@ -160,10 +168,20 @@ export const deletePost = async (req, res) => {
             });
         }
 
+        if (post.juniorId.toString() !== req.user.userId && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to delete this post',
+                code: 'FORBIDDEN'
+            });
+        }
+
+        await JuniorSpacePost.findByIdAndDelete(postId);
+
         // Emit real-time event
         try {
             const io = getIO();
-            io.to("junior-space").emit("post-deleted", {postId});
+            io.to("junior-space").emit("post-deleted", { postId });
         } catch (socketError) {
             console.error("Socket.IO error:", socketError.message);
         }
@@ -171,7 +189,7 @@ export const deletePost = async (req, res) => {
         res.status(200).json({
             success: true,
             message: "Junior space post deleted successfully",
-            data: {postId: post._id},
+            data: { postId: post._id },
         });
     } catch (error) {
         res.status(500).json({
@@ -184,8 +202,8 @@ export const deletePost = async (req, res) => {
 
 export const getPostsByUser = async (req, res) => {
     try {
-        const {juniorId} = req.params;
-        const {page = 1, limit = 10} = req.query;
+        const { juniorId } = req.params;
+        const { page = 1, limit = 10 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const user = await User.findById(juniorId);
@@ -197,13 +215,13 @@ export const getPostsByUser = async (req, res) => {
             });
         }
 
-        const posts = await JuniorSpacePost.find({juniorId})
-            .sort({createdAt: -1})
+        const posts = await JuniorSpacePost.find({ juniorId })
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
 
-        const total = await JuniorSpacePost.countDocuments({juniorId});
+        const total = await JuniorSpacePost.countDocuments({ juniorId });
 
         res.status(200).json({
             success: true,
@@ -226,11 +244,11 @@ export const getPostsByUser = async (req, res) => {
 
 export const getRecentPosts = async (req, res) => {
     try {
-        const {limit = 20} = req.query;
+        const { limit = 20 } = req.query;
 
         const recentPosts = await JuniorSpacePost.find()
             .populate("juniorId", "name email bio")
-            .sort({createdAt: -1})
+            .sort({ createdAt: -1 })
             .limit(parseInt(limit))
             .lean();
 
@@ -256,13 +274,13 @@ export const getJuniorSpaceStats = async (req, res) => {
             {
                 $group: {
                     _id: {
-                        $dateToString: {format: "%Y-%m-%d", date: "$createdAt"},
+                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
                     },
-                    count: {$sum: 1},
+                    count: { $sum: 1 },
                 },
             },
-            {$sort: {_id: -1}},
-            {$limit: 30},
+            { $sort: { _id: -1 } },
+            { $limit: 30 },
         ]);
 
         res.status(200).json({

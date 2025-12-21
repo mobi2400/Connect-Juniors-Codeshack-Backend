@@ -5,7 +5,7 @@ import User from '../models/user.model.js';
 export const upvoteAnswer = async (req, res) => {
   try {
     const { answerId } = req.params;
-    const { userId } = req.body;
+    const { userId } = req.user;
 
     const answer = await Answer.findById(answerId);
     if (!answer) {
@@ -16,6 +16,7 @@ export const upvoteAnswer = async (req, res) => {
       });
     }
 
+    // Check if user exists (already mostly guaranteed by auth middleware, but okay)
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -71,7 +72,7 @@ export const upvoteAnswer = async (req, res) => {
 export const removeUpvote = async (req, res) => {
   try {
     const { answerId } = req.params;
-    const { userId } = req.body;
+    const { userId } = req.user;
 
     const upvote = await Upvote.findOne({ userId, answerId });
     if (!upvote) {

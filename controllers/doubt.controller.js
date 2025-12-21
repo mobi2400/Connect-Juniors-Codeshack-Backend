@@ -5,7 +5,7 @@ import User from '../models/user.model.js';
 
 export const createDoubt = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.user;
     const { title, description, tags } = req.body;
 
     const userExists = await User.findById(userId);
@@ -131,6 +131,15 @@ export const updateDoubt = async (req, res) => {
       });
     }
 
+    // Check authorization
+    if (doubt.juniorId.toString() !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this doubt',
+        code: 'FORBIDDEN'
+      });
+    }
+
     const updateData = {};
     if (title) updateData.title = title;
     if (description) updateData.description = description;
@@ -161,7 +170,7 @@ export const deleteDoubt = async (req, res) => {
   try {
     const { doubtId } = req.params;
 
-    const doubt = await Doubt.findByIdAndDelete(doubtId);
+    const doubt = await Doubt.findById(doubtId);
     if (!doubt) {
       return res.status(404).json({
         success: false,
@@ -169,6 +178,17 @@ export const deleteDoubt = async (req, res) => {
         code: 'DOUBT_NOT_FOUND'
       });
     }
+
+    // Check authorization
+    if (doubt.juniorId.toString() !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this doubt',
+        code: 'FORBIDDEN'
+      });
+    }
+
+    await Doubt.findByIdAndDelete(doubtId);
 
     await Answer.deleteMany({ doubtId });
     await Comment.deleteMany({ doubtId });

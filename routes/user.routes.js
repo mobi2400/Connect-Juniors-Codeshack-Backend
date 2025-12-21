@@ -6,6 +6,7 @@ import {
     loginSchema,
     updateProfileSchema,
 } from "../schema/user.schema.js";
+import { authenticate } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -23,12 +24,13 @@ router.get("/role/:role", userController.getUsersByRole);
 router.get("/:userId", userController.getUserProfile);
 router.patch(
     "/:userId",
+    authenticate,
     validate(updateProfileSchema),
     userController.updateUserProfile
 );
-router.delete("/:userId", userController.deleteUser);
+router.delete("/:userId", authenticate, userController.deleteUser);
 
 // Change password
-router.post("/:userId/change-password", userController.changePassword);
+router.post("/:userId/change-password", authenticate, userController.changePassword);
 
 export default router;

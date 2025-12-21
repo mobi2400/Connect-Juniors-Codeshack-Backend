@@ -6,8 +6,16 @@ import Upvote from '../models/upvote.model.js';
 export const createAnswer = async (req, res) => {
   try {
     const { doubtId } = req.params;
-    const { mentorId } = req.params;
+    const { userId: mentorId, role } = req.user;
     const { content } = req.body;
+
+    if (role !== 'mentor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only mentors can post answers',
+        code: 'UNAUTHORIZED'
+      });
+    }
 
     const doubt = await Doubt.findById(doubtId);
     if (!doubt) {
@@ -18,12 +26,19 @@ export const createAnswer = async (req, res) => {
       });
     }
 
+    // Check if mentor is approved (optional based on PRD, but good practice if field exists)
+    // const mentor = await User.findById(mentorId);
+    // if (!mentor.isMentorApproved) ... (Assuming auth middleware or login handles basic checks, but "approved" is specific)
+    // For now, simple role check is consistent with PRD "Signup -> Login -> Answer".
+    // Wait, PRD says "Admin can approve mentor accounts". If they sign up as mentor, are they approved?
+    // My register logic sets isMentorApproved = false for mentors. So we MUST check this here.
+
     const mentor = await User.findById(mentorId);
-    if (!mentor || mentor.role !== 'mentor') {
+    if (!mentor.isMentorApproved) {
       return res.status(403).json({
         success: false,
-        message: 'Only mentors can post answers',
-        code: 'UNAUTHORIZED'
+        message: 'Your mentor account is not approved yet',
+        code: 'NOT_APPROVED'
       });
     }
 
@@ -141,6 +156,14 @@ export const updateAnswer = async (req, res) => {
       });
     }
 
+    if (answer.mentorId.toString() !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this answer',
+        code: 'FORBIDDEN'
+      });
+    }
+
     const updatedAnswer = await Answer.findByIdAndUpdate(
       answerId,
       { content },
@@ -165,7 +188,7 @@ export const deleteAnswer = async (req, res) => {
   try {
     const { answerId } = req.params;
 
-    const answer = await Answer.findByIdAndDelete(answerId);
+    const answer = await Answer.findById(answerId);
     if (!answer) {
       return res.status(404).json({
         success: false,
@@ -173,6 +196,16 @@ export const deleteAnswer = async (req, res) => {
         code: 'ANSWER_NOT_FOUND'
       });
     }
+
+    if (answer.mentorId.toString() !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this answer',
+        code: 'FORBIDDEN'
+      });
+    }
+
+    await Answer.findByIdAndDelete(answerId);
 
     await Upvote.deleteMany({ answerId });
 

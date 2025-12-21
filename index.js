@@ -1,9 +1,9 @@
 import express from "express";
-import {createServer} from "http";
+import { createServer } from "http";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./database/connection.js";
-import {initSocket} from "./socket/socket.js";
+import { initSocket } from "./socket/socket.js";
 
 // Import routes
 import userRoutes from "./routes/user.routes.js";
@@ -32,10 +32,7 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
-
-// Connect to MongoDB
-connectDB();
+app.use(express.urlencoded({ extended: true }));
 
 // Initialize Socket.IO
 initSocket(httpServer);
@@ -78,11 +75,22 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`Socket.IO is enabled for real-time features`);
-    console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-});
+const startServer = async () => {
+    try {
+        await connectDB();
+
+        const PORT = process.env.PORT || 5000;
+        httpServer.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+            console.log(`Socket.IO is enabled for real-time features`);
+            console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+        });
+    } catch (error) {
+        console.error("Failed to connect to database:", error);
+        process.exit(1);
+    }
+};
+
+startServer();
 
 export default app;

@@ -41,15 +41,14 @@ const doubtSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt timestamp before saving
-doubtSchema.pre("save", function (next) {
+doubtSchema.pre("save", async function () {
     this.updatedAt = Date.now();
-    next();
 });
 
 // Indexes for faster queries
-doubtSchema.index({juniorId: 1});
-doubtSchema.index({status: 1});
-doubtSchema.index({tags: 1});
-doubtSchema.index({createdAt: -1});
+doubtSchema.index({ juniorId: 1 });
+doubtSchema.index({ status: 1 });
+doubtSchema.index({ tags: 1 });
+doubtSchema.index({ createdAt: -1 });
 
 export default mongoose.model("Doubt", doubtSchema);

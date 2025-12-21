@@ -33,14 +33,13 @@ const answerSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt timestamp before saving
-answerSchema.pre("save", function (next) {
+answerSchema.pre("save", async function () {
     this.updatedAt = Date.now();
-    next();
 });
 
 // Indexes
-answerSchema.index({doubtId: 1});
-answerSchema.index({mentorId: 1});
-answerSchema.index({upvoteCount: -1});
+answerSchema.index({ doubtId: 1 });
+answerSchema.index({ mentorId: 1 });
+answerSchema.index({ upvoteCount: -1 });
 
 export default mongoose.model("Answer", answerSchema);
